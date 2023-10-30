@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "db_cache_manager"
+version = "0.0.4"
+authors = [
+  { name="Ramtin Yazdanian", email="ramtin.yazdanian@epfl.ch" },
+  { name="Aitor Pérez", email="aitor.perez@epfl.ch" }
+]
+description = "Custom database connector and cache manager with default support for fingerprinting and fingerprint lookups, DAG-like chains of identical rows, and cache tables that reference each other."
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "pandas",
+  "mysql-connector-python"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/epflgraph/db-cache-manager"
+"Bug Tracker" = "https://github.com/epflgraph/db-cache-manager/issues"
