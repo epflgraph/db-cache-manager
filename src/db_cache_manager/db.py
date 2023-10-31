@@ -712,12 +712,14 @@ class DBCachingManagerBase(abc.ABC):
         Inserts or updates the value of a row in the closest match table
         Args:
             id_token: Identifier token
-            values_to_insert: Dict of values to insert
+            values_to_insert: Dict of values to insert. It must consist of a single key 'most_similar_token'.
 
         Returns:
             None
         """
-        self._insert_or_update_details(self.most_similar_table, id_token, values_to_insert)
+        closest_match = values_to_insert['most_similar_token']
+        closest_match = self.get_closest_match(closest_match)
+        self._insert_or_update_details(self.most_similar_table, id_token, {'most_similar_token': closest_match})
 
     def get_closest_match(self, id_token):
         """
