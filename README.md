@@ -95,7 +95,7 @@ class ExampleDBCachingManager(DBCachingManagerBase):
         )
 
         # Creating the cache table if it does not exist
-        # The columns "id_token", "fingerprint", and "date_added" should not have their names changed, since the
+        # The columns "id_token" and "date_added" should not have their names changed, since the
         # methods in the parent class rely on their names.
         # The types of "id_token" and "date_added" should not be changed, but "fingerprint" can be LONGTEXT if need be.
         # Aside from these three columns, add any columns you need. For this example, the task could be text
@@ -138,6 +138,8 @@ class ExampleDBCachingManager(DBCachingManagerBase):
             """
         )
 ```
+
+The names `id_token`, `most_similar_token`, and `date_added` should be left as-is. Other column names can be changed (even `fingerprint`).
 
 Here is an example of how the example class can be used:
 
