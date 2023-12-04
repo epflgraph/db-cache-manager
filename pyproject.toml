@@ -19,7 +19,7 @@ classifiers = [
 ]
 dependencies = [
   "pandas",
-  "mysql-connector-python"
+  "pymysql"
 ]
 
 [project.urls]
