@@ -3,7 +3,7 @@ import sys
 
 import pandas as pd
 
-import mysql.connector
+import pymysql
 
 
 def quote_value(v):
@@ -28,7 +28,7 @@ class DB:
         self.user = db_config['user']
         self.password = db_config['pass']
 
-        self.cnx = mysql.connector.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+        self.cnx = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password)
 
     def __del__(self):
         if hasattr(self, 'cnx'):
@@ -45,22 +45,20 @@ class DB:
 
         # Refresh connection
         self.cnx.ping(reconnect=True)
-        cursor = self.cnx.cursor()
+        with self.cnx.cursor() as cursor:
+            try:
+                if values:
+                    cursor.execute(query, values)
+                else:
+                    cursor.execute(query)
+            except pymysql.Error as e:
+                print("Error", e)
+                raise e
 
-        try:
-            if values:
-                cursor.execute(query, values)
-            else:
-                cursor.execute(query)
-        except mysql.connector.Error as e:
-            print("Error", e)
-            raise e
+            results = list(cursor.fetchall())
 
-        results = list(cursor)
-
-        self.cnx.commit()
-
-        return results
+            self.cnx.commit()
+            return results
 
     def build_conditions_list(self, conditions=None, values=None):
         if conditions is None:
@@ -118,7 +116,7 @@ class DB:
         try:
             conditions = {filter_field: filter_ids} if filter_ids else {}
             return pd.DataFrame(self.find(table_name, fields=fields, conditions=conditions), columns=columns)
-        except mysql.connector.Error:
+        except pymysql.Error:
             n = len(filter_ids)
             print(f'Failed fetching df filtering {n} ids. Splitting in two and retrying...')
             df1 = self.find_or_split(table_name, fields, columns, filter_field, filter_ids[: n // 2])
@@ -150,13 +148,13 @@ class DB:
 
         try:
             self.execute_query(query, values)
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             handled_error_codes = [
-                mysql.connector.errorcode.CR_SERVER_LOST_EXTENDED,  # Broken pipe error (connection closed by server)
-                mysql.connector.errorcode.ER_NET_PACKET_TOO_LARGE   # Packet bigger than max_allowed_packet
+                pymysql.constants.CR.CR_SERVER_LOST_EXTENDED,  # Broken pipe error (connection closed by server)
+                pymysql.constants.CR.CR_NET_PACKET_TOO_LARGE   # Packet bigger than max_allowed_packet
             ]
 
-            if e.errno in handled_error_codes:
+            if e.args[0] in handled_error_codes:
                 n = len(df)
                 payload_size_bytes = sys.getsizeof(query)
                 print(f'Failed inserting df with {n} rows (query payload size: {payload_size_bytes / (2**20) :.2f} MB). Splitting in two and retrying...')
