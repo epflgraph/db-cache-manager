@@ -24,9 +24,9 @@ class DB:
         # All except port (which is an int) are strings
 
         self.host = db_config['host']
-        self.port = db_config['port']
+        self.port = int(db_config['port'])
         self.user = db_config['user']
-        self.password = db_config['pass']
+        self.password = db_config['password']
 
         self.cnx = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password)
 
