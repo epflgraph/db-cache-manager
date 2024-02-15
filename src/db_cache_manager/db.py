@@ -804,6 +804,8 @@ class ExampleDBCachingManager(DBCachingManagerBase):
               `fingerprint` VARCHAR(255) DEFAULT NULL,
               `input` LONGTEXT DEFAULT NULL,
               `output` VARCHAR(255) DEFAULT NULL,
+              `input_length` FLOAT DEFAULT NULL,
+              `input_flag` TINYINT(1) DEFAULT 1,
               `date_added` DATETIME DEFAULT NULL,
               PRIMARY KEY id_token (id_token)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
