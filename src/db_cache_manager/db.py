@@ -58,6 +58,7 @@ class DB:
             results = list(cursor.fetchall())
 
             self.cnx.commit()
+            print(cursor._last_executed)
             return results
 
     def build_conditions_list(self, conditions=None, values=None):
@@ -260,7 +261,9 @@ def add_equality_conditions(conditions):
     Returns:
         A string containing the conditions.
     """
-    return " AND ".join([f"{k}='{escape_everything(v)}'" for k, v in conditions.items()])
+    if len(conditions) == 0:
+        return "", list()
+    return " AND ".join([f"{k}=%s" for k in conditions.keys()]), list(conditions.values())
 
 
 def add_non_null_conditions(cols):
@@ -326,42 +329,40 @@ class DBCachingManagerBase(abc.ABC):
         if values_to_insert is None:
             values_to_insert = dict()
         values_to_insert = {
-            x: surround_with_character(escape_everything(values_to_insert[x]), "'")
-            if isinstance(values_to_insert[x], str)
-            else str(values_to_insert[x]) if values_to_insert[x] is not None
-            else 'null'
+            x: str(values_to_insert[x]) if values_to_insert[x] is not None else 'null'
             for x in values_to_insert
         }
         existing = self.db.execute_query(
-            f"""
-            SELECT COUNT(*) FROM `{self.schema}`.`{table_name}`
-            WHERE id_token={surround_with_character(id_token, "'")}
             """
+            SELECT COUNT(*) FROM `{self.schema}`.`{table_name}`
+            WHERE id_token=%s
+            """, values=(id_token, )
         )[0][0]
         if existing > 0:
             cols = [surround_with_character(x, "`") for x in values_to_insert.keys()]
             values = list(values_to_insert.values())
-            cols_and_values = [cols[i] + ' = ' + values[i] for i in range(len(cols))]
+            cols_and_value_placeholders = [f'{cols[i]} = %s' for i in range(len(cols))]
+            all_values = tuple(values + [id_token])
             self.db.execute_query(
                 f"""
                 UPDATE `{self.schema}`.`{table_name}`
                 SET
-                {', '.join(cols_and_values)}
-                WHERE id_token={surround_with_character(id_token, "'")};
-                """
+                {', '.join(cols_and_value_placeholders)}
+                WHERE id_token=%s;
+                """, values=all_values
             )
         else:
             cols = ['id_token'] + [x for x in values_to_insert.keys()]
             cols = [surround_with_character(x, "`") for x in cols]
-            values = [surround_with_character(id_token, "'")] + list(values_to_insert.values())
+            values = tuple([id_token] + list(values_to_insert.values()))
 
             self.db.execute_query(
                 f"""
                 INSERT INTO `{self.schema}`.`{table_name}`
                     ({', '.join(cols)})
                     VALUES
-                    ({', '.join(values)});
-                """
+                    ({', '.join(["%s"] * len(values))});
+                """, values=values
             )
 
     def _get_details(self, table_name, id_token, cols):
@@ -379,8 +380,8 @@ class DBCachingManagerBase(abc.ABC):
         results = self.db.execute_query(
             f"""
             SELECT {', '.join(column_list)} FROM `{self.schema}`.`{table_name}`
-            WHERE id_token={surround_with_character(id_token, "'")}
-            """
+            WHERE id_token=%s
+            """, values=(id_token, )
         )
         if len(results) > 0:
             results = {column_list[i]: results[0][i] for i in range(len(column_list))}
@@ -416,11 +417,11 @@ class DBCachingManagerBase(abc.ABC):
         column_list = ['origin_token', 'id_token'] + cols
         query = f"""
             SELECT {', '.join(column_list)} FROM `{self.schema}`.`{table_name}`
-            WHERE origin_token={surround_with_character(origin_token, "'")}
+            WHERE origin_token=%s
             """
         if has_date_col:
             query += '\nORDER BY date_added'
-        results = self.db.execute_query(query)
+        results = self.db.execute_query(query, values=(origin_token, ))
         if len(results) > 0:
             results = [{column_list[i]: result[i] for i in range(len(column_list))} for result in results]
         else:
@@ -447,19 +448,22 @@ class DBCachingManagerBase(abc.ABC):
         Returns:
             Dictionary mapping each id_token to a dictionary of column name : values.
         """
+        all_values = list()
         column_list = ['id_token'] + cols
         query = f"""
             SELECT {', '.join(column_list)} FROM `{self.schema}`.`{table_name}`
             """
         if exclude_token is not None:
             if isinstance(exclude_token, str):
-                query += f"""
-                WHERE id_token != {surround_with_character(exclude_token, "'")}
+                query += """
+                WHERE id_token != %s
                 """
+                all_values.append(exclude_token)
             else:
                 query += f"""
-                WHERE id_token NOT IN ({','.join([surround_with_character(t, "'") for t in exclude_token])})
+                WHERE id_token NOT IN ({', '.join(["%s"] * len(exclude_token))})
                 """
+                all_values.extend(exclude_token)
         if not allow_nulls:
             query += add_where_or_and(query)
             query += add_non_null_conditions(cols)
@@ -474,7 +478,9 @@ class DBCachingManagerBase(abc.ABC):
                 query += f" {date_col_to_use_for_comp} <= '{latest_date}'"
         if equality_conditions is not None:
             query += add_where_or_and(query)
-            query += add_equality_conditions(equality_conditions)
+            eq_condition_str, eq_condition_values = add_equality_conditions(equality_conditions)
+            query += eq_condition_str
+            all_values.extend(eq_condition_values)
         # ORDER BY comes before LIMIT but after WHERE
         if has_date_col and sort_by_date_col:
             query += "\nORDER BY date_added"
@@ -484,7 +490,7 @@ class DBCachingManagerBase(abc.ABC):
             query += f"""
             LIMIT {start},{limit}
             """
-        results = self.db.execute_query(query)
+        results = self.db.execute_query(query, values=tuple(all_values))
         if len(results) > 0:
             results = {row[0]: {column_list[i]: row[i] for i in range(len(column_list))} for row in results}
         else:
@@ -503,11 +509,11 @@ class DBCachingManagerBase(abc.ABC):
         """
         if id_tokens is None or len(id_tokens) == 0:
             return
-        id_tokens_str = '(' + ', '.join([surround_with_character(id_token, "'") for id_token in id_tokens]) + ')'
+        id_tokens_placeholder_str = f'({", ".join(["%s"] * len(id_tokens))})'
         self.db.execute_query(
             f"""
-            DELETE FROM `{self.schema}`.`{table_name}` WHERE id_token IN {id_tokens_str}
-            """
+            DELETE FROM `{self.schema}`.`{table_name}` WHERE id_token IN {id_tokens_placeholder_str}
+            """, values=id_tokens
         )
 
     def _get_count(self, table_name, non_null_cols=None, equality_conditions=None):
@@ -521,6 +527,7 @@ class DBCachingManagerBase(abc.ABC):
         Returns:
             Number of rows with the given conditions
         """
+        all_values = list()
         query = f"""
         SELECT COUNT(*) FROM `{self.schema}`.`{table_name}`
         """
@@ -530,8 +537,10 @@ class DBCachingManagerBase(abc.ABC):
             """
         if equality_conditions is not None:
             query += add_where_or_and(query)
-            query += add_equality_conditions(equality_conditions)
-        results = self.db.execute_query(query)
+            eq_condition_str, eq_condition_values = add_equality_conditions(equality_conditions)
+            query += eq_condition_str
+            all_values.extend(eq_condition_values)
+        results = self.db.execute_query(query, values=tuple(all_values))
         return results[0][0]
 
     def _row_exists(self, table_name, id_token):
@@ -546,9 +555,9 @@ class DBCachingManagerBase(abc.ABC):
         """
         query = f"""
         SELECT COUNT(*) FROM `{self.schema}`.`{table_name}`
-        WHERE id_token = '{id_token}'
+        WHERE id_token=%s
         """
-        results = self.db.execute_query(query)
+        results = self.db.execute_query(query, values=(id_token, ))
         if len(results) > 0:
             return True
         return False
