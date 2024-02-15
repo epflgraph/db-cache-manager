@@ -58,7 +58,6 @@ class DB:
             results = list(cursor.fetchall())
 
             self.cnx.commit()
-            print(cursor._last_executed)
             return results
 
     def build_conditions_list(self, conditions=None, values=None):
@@ -329,11 +328,11 @@ class DBCachingManagerBase(abc.ABC):
         if values_to_insert is None:
             values_to_insert = dict()
         values_to_insert = {
-            x: str(values_to_insert[x]) if values_to_insert[x] is not None else 'null'
+            x: str(values_to_insert[x]) if values_to_insert[x] is not None else None
             for x in values_to_insert
         }
         existing = self.db.execute_query(
-            """
+            f"""
             SELECT COUNT(*) FROM `{self.schema}`.`{table_name}`
             WHERE id_token=%s
             """, values=(id_token, )
@@ -804,6 +803,7 @@ class ExampleDBCachingManager(DBCachingManagerBase):
             CREATE TABLE IF NOT EXISTS `{self.schema}`.`{self.cache_table}` (
               `id_token` VARCHAR(255),
               `fingerprint` VARCHAR(255) DEFAULT NULL,
+              `origin_token` VARCHAR(255),
               `input` LONGTEXT DEFAULT NULL,
               `output` VARCHAR(255) DEFAULT NULL,
               `input_length` FLOAT DEFAULT NULL,
