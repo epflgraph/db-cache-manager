@@ -20,6 +20,7 @@ classifiers = [
 dependencies = [
   "pandas",
   "pymysql",
+  "pytest",
   "configparser"
 ]
 
