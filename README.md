@@ -9,6 +9,22 @@ To install the package, run:
 pip install db-cache-manager
 ```
 
+### Testing
+To run the tests, clone the GitHub repository and install the package. Then, in the root directory of the 
+repo, create a `config.ini` file that looks like the following:
+
+```
+[database]
+host: <db host>
+port: <db port>
+user: <youruser>
+password: <yourpassword>
+```
+
+Fill in the blanks with the credentials of your database of choice. You can then run the tests by calling 
+`pytest` in the `./tests` directory.
+
+
 ## Features
 
 This package contains two classes, `DB` and `DBCachingManagerBase`, and a variety of helper functions (mostly for escaping characters in strings that are to be inserted into a database). 
