@@ -757,7 +757,7 @@ class ExampleDBCachingManager(DBCachingManagerBase):
     # For most purposes, the default methods defined in the parent class should be appropriate for any and all tasks.
     # Feel free to overwrite any if you have special mechanisms (e.g. if some results expire after a certain amount
     # of time, you may have to overwrite `get_details`, `get_details_using_origin`, etc.)
-    def __init__(self):
+    def __init__(self, db_config=None):
         """
         db_config: Parameters for the database connection
         cache_table: Name of the main cache table, where the actual results are stored
@@ -765,15 +765,17 @@ class ExampleDBCachingManager(DBCachingManagerBase):
             of the cache table are stored
         schema: Name of the database schema
         """
-        super().__init__(
-            db_config={
+        if db_config is None:
+            db_config = {
                 'host': 'localhost',
                 'port': 3306,
                 'user': 'root',
-                'pass': ''
-            },
+                'password': ''
+            }
+        super().__init__(
+            db_config=db_config,
             cache_table='Example_Main', most_similar_table='Example_Most_Similar',
-            schema='cache_graphai'
+            schema='test_db_cache_manager'
         )
 
     def init_db(self):
