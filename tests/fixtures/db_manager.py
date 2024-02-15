@@ -1,19 +1,30 @@
 import pytest
 
 
+DATE_1 = '2023-09-10 11:11:11'
+DATE_2 = '2023-09-12 07:08:09'
+
+
+@pytest.fixture
+def date_2():
+    return DATE_2
+
+
 @pytest.fixture
 def basic_rows():
-    dates = ['2023-09-10 11:11:11', '2023-09-12 07:08:09']
-    return [
-        (f'test_token_{str(i)}',
-         f'test_fingerprint_{str(i // 2)}',
-         '',
-         '',
-         0,
-         1,
-         dates[i // 3])
+    dates = [DATE_1, DATE_2]
+    return {
+        f'test_token_{str(i)}': {
+            'fingerprint': f'test_fingerprint_{str(i // 2)}' if i != 3 else None,
+            'origin_token': f'origin_token_{str(i // 3)}',
+            'input': str(i),
+            'output': '',
+            'input_length': 0,
+            'input_flag': i % 2,
+            'date_added': dates[i // 3]
+        }
         for i in range(5)
-    ]
+    }
 
 
 @pytest.fixture
@@ -22,8 +33,18 @@ def id_token():
 
 
 @pytest.fixture
+def origin_token():
+    return 'origin_token_0'
+
+
+@pytest.fixture
 def fingerprint():
     return 'test_fingerprint_0'
+
+
+@pytest.fixture
+def other_fingerprint():
+    return 'test_fingerprint_2'
 
 
 @pytest.fixture
@@ -34,6 +55,11 @@ def new_fingerprint():
 @pytest.fixture
 def eq_cond():
     return {'fingerprint': 'test_fingerprint_0'}
+
+
+@pytest.fixture
+def second_eq_cond():
+    return {'input_flag': 0}
 
 
 @pytest.fixture
