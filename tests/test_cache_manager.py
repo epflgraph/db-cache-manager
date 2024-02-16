@@ -90,3 +90,20 @@ def test__select_all(id_token, earliest_date, fingerprint, date_2, other_fingerp
     results = cache_manager.get_all_details(cols=['fingerprint'], start=3, limit=1)
     assert len(results) == 1
     assert all(results[k]['fingerprint'] is None for k in results)
+
+
+@pytest.mark.usefixtures('attack_token_1', 'attack_token_2', 'attack_token_3', 'attack_token_4')
+def test__attack(attack_token_1, attack_token_2, attack_token_3, attack_token_4):
+    cache_manager = ExampleDBCachingManager(read_config())
+    results = cache_manager.get_details(attack_token_1, ['fingerprint'])[0]
+    assert results is None
+
+    results = cache_manager.get_details(attack_token_2, ['fingerprint'])[0]
+    assert results is None
+
+    results = cache_manager.get_details(attack_token_3, ['fingerprint'])[0]
+    assert results is None
+
+    results = cache_manager.get_details(attack_token_4, ['fingerprint'])[0]
+    assert results is None
+    assert cache_manager.db.check_if_table_exists('test_db_cache_manager', 'Example_Most_Similar')

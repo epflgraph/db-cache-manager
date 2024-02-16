@@ -65,3 +65,23 @@ def second_eq_cond():
 @pytest.fixture
 def earliest_date():
     return '2023-09-11 00:01:02'
+
+
+@pytest.fixture
+def attack_token_1():
+    return "test_token_0 OR 1=1"
+
+
+@pytest.fixture
+def attack_token_2():
+    return "test_token_0' OR '1'='1"
+
+
+@pytest.fixture
+def attack_token_3():
+    return "' or ''='"
+
+
+@pytest.fixture
+def attack_token_4():
+    return "'test_token_0'; DROP TABLE `test_db_cache_manager`.`Example_Most_Similar`"
