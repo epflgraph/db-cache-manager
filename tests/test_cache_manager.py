@@ -92,18 +92,37 @@ def test__select_all(id_token, earliest_date, fingerprint, date_2, other_fingerp
     assert all(results[k]['fingerprint'] is None for k in results)
 
 
-@pytest.mark.usefixtures('attack_token_1', 'attack_token_2', 'attack_token_3', 'attack_token_4')
-def test__attack(attack_token_1, attack_token_2, attack_token_3, attack_token_4):
+@pytest.mark.usefixtures('id_token', 'attack_token_1', 'attack_token_2',
+                         'attack_token_3', 'attack_token_4', 'fingerprint')
+def test__attack(id_token, attack_token_1, attack_token_2, attack_token_3, attack_token_4, fingerprint):
     cache_manager = ExampleDBCachingManager(read_config())
+
+    # Attack #1: OR with always-true condition
     results = cache_manager.get_details(attack_token_1, ['fingerprint'])[0]
     assert results is None
 
+    # Attack #2: Same as above but with single quotes
     results = cache_manager.get_details(attack_token_2, ['fingerprint'])[0]
     assert results is None
 
+    # Attack #3: Always-true condition exploiting single quotes
     results = cache_manager.get_details(attack_token_3, ['fingerprint'])[0]
     assert results is None
 
+    # Attack #4: With drop table command
     results = cache_manager.get_details(attack_token_4, ['fingerprint'])[0]
     assert results is None
     assert cache_manager.db.check_if_table_exists('test_db_cache_manager', 'Example_Most_Similar')
+
+    # Attack #5: Update with always-true condition
+    cache_manager.insert_or_update_details(attack_token_1, {'fingerprint': 'gibberish'})
+    results = cache_manager.get_details(id_token, ['fingerprint'])[0]
+    assert results['fingerprint'] == fingerprint
+    # Checking that in fact, an insertion happened instead of an update
+    results = cache_manager.get_details(attack_token_1, ['fingerprint'])[0]
+    assert results['fingerprint'] == 'gibberish'
+    # Deleting the new row
+    cache_manager.delete_cache_rows([attack_token_1])
+    # Checking that the deletion happened correctly
+    count = cache_manager.get_cache_count()
+    assert count == 5
