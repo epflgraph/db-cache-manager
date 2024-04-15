@@ -684,18 +684,24 @@ class DBCachingManagerBase(abc.ABC):
         Returns:
             Dict mapping id tokens to colname->value dicts
         """
-        # If we want to exclude a token, all the tokens whose closest match is the former should also be excluded
-        # in order not to create cycles.
+        # If we want to exclude one or more tokens, all the tokens whose closest match is the former should
+        # also be excluded in order not to create cycles.
         if exclude_token is not None:
+            # Convert exclude_token into a set
+            if isinstance(exclude_token, list):
+                exclude_token = set(exclude_token)
+            if not isinstance(exclude_token, set):
+                exclude_token = {exclude_token}
             all_closest_matches = self.get_all_closest_matches()
             if all_closest_matches is not None:
-                exclude_tokens = {k for k, v in all_closest_matches.items() if v == exclude_token}
+                all_tokens_to_exclude = {k for k, v in all_closest_matches.items() if v in exclude_token}
             else:
-                exclude_tokens = set()
-            exclude_tokens.add(exclude_token)
+                all_tokens_to_exclude = set()
+            all_tokens_to_exclude = all_tokens_to_exclude.union(exclude_token)
         else:
-            exclude_tokens = None
-        results = self._get_all_details(self.cache_table, cols, start=start, limit=limit, exclude_token=exclude_tokens,
+            all_tokens_to_exclude = None
+        results = self._get_all_details(self.cache_table, cols, start=start, limit=limit,
+                                        exclude_token=all_tokens_to_exclude,
                                         allow_nulls=allow_nulls, earliest_date=earliest_date, latest_date=latest_date,
                                         equality_conditions=equality_conditions, has_date_col=True,
                                         sort_by_date_col=do_date_sort, use_date_modified_col=use_date_modified_col)
