@@ -280,7 +280,8 @@ def add_non_null_conditions(cols):
 class DBCachingManagerBase(abc.ABC):
     def __init__(self, db_config, cache_table, most_similar_table, schema='cache_graphai',
                  cache_date_added_col='date_added',
-                 cache_date_modified_col='date_added'):
+                 cache_date_modified_col='date_added',
+                 initialize_database=False):
         # Only three values are hardcoded into this class and need to be respected by its child classes:
         # 1. The name of the id column for both the main and the most-similar tables is 'id_token'
         # 2. The cache tables must have a "date_added" column of the data type DATETIME,
@@ -292,7 +293,8 @@ class DBCachingManagerBase(abc.ABC):
         self.cache_date_added_col = cache_date_added_col
         self.cache_date_modified_col = cache_date_modified_col
         self.db = DB(db_config)
-        self.init_db()
+        if initialize_database:
+            self.init_db()
 
     @abc.abstractmethod
     def init_db(self):
