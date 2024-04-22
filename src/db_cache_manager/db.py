@@ -479,7 +479,7 @@ class DBCachingManagerBase(abc.ABC):
                 query += f" {date_col_to_use_for_comp} >= '{earliest_date}'"
             if latest_date is not None:
                 query += add_where_or_and(query)
-                query += f" {date_col_to_use_for_comp} <= '{latest_date}'"
+                query += f" {date_col_to_use_for_comp} < '{latest_date}'"
         if equality_conditions is not None:
             query += add_where_or_and(query)
             eq_condition_str, eq_condition_values = add_equality_conditions(equality_conditions)
