@@ -431,7 +431,7 @@ class DBCachingManagerBase(abc.ABC):
 
     def _get_all_details(self, table_name, cols, start=0, limit=-1, exclude_token=None, allow_nulls=True,
                          earliest_date=None, latest_date=None, equality_conditions=None, has_date_col=False,
-                         sort_by_date_col=True, use_date_modified_col=False):
+                         sort_by_date_col=True, sort_by_id_token=True, use_date_modified_col=False):
         """
         Internal method. Gets the details of all rows in a table, with some conditions.
         Args:
@@ -443,7 +443,9 @@ class DBCachingManagerBase(abc.ABC):
             allow_nulls: Whether to allow null values or to exclude rows where any of the required columns is null
             earliest_date: The earliest date to include
             equality_conditions: Equality conditions
-            has_date_col: Whether the table has a date_added column, which would be used to sort the results.
+            has_date_col: Whether the table has a date_added column be used to sort the results.
+            sort_by_date_col: Whether to use the date col (if existing) to sort
+            sort_by_id_token: Whether to use the id token col to sort, overridden by sort_by_date_col
             use_date_modified_col: Whether to use the date_modified or the date_added column for comparisons
                 with `earliest_date` or `latest_date`.
         Returns:
@@ -485,7 +487,7 @@ class DBCachingManagerBase(abc.ABC):
         # ORDER BY comes before LIMIT but after WHERE
         if has_date_col and sort_by_date_col:
             query += "\nORDER BY date_added"
-        else:
+        elif sort_by_id_token:
             query += "\nORDER BY id_token"
         if limit != -1:
             query += f"""
@@ -752,7 +754,8 @@ class DBCachingManagerBase(abc.ABC):
         Returns:
             All rows in most similar token table
         """
-        results = self._get_all_details(self.most_similar_table, ['most_similar_token'], has_date_col=False)
+        results = self._get_all_details(self.most_similar_table, ['most_similar_token'],
+                                        has_date_col=False, sort_by_id_token=False)
         if results is not None:
             return {x: results[x]['most_similar_token'] for x in results
                     if results[x]['most_similar_token'] is not None}
