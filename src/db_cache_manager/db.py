@@ -2,6 +2,7 @@ import abc
 import sys
 
 import pandas as pd
+from itertools import chain
 
 import pymysql
 
@@ -696,9 +697,9 @@ class DBCachingManagerBase(abc.ABC):
                 exclude_token = set(exclude_token)
             if not isinstance(exclude_token, set):
                 exclude_token = {exclude_token}
-            all_closest_matches = self.get_all_closest_matches()
+            all_closest_matches = self.get_closest_matches_within_closest_match_set(exclude_token)
             if all_closest_matches is not None:
-                all_tokens_to_exclude = {k for k, v in all_closest_matches.items() if v in exclude_token}
+                all_tokens_to_exclude = all_closest_matches
             else:
                 all_tokens_to_exclude = set()
             all_tokens_to_exclude = all_tokens_to_exclude.union(exclude_token)
@@ -748,6 +749,20 @@ class DBCachingManagerBase(abc.ABC):
         """
         return self._resolve_most_similar_chain(id_token)
 
+    def get_closest_match_origin(self, closest_token):
+        column_list = ['id_token', 'most_similar_token']
+        results = self.db.execute_query(
+            f"""
+                    SELECT {', '.join(column_list)} FROM `{self.schema}`.`{self.most_similar_table}`
+                    WHERE most_similar_token=%s
+                    """, values=(closest_token,)
+        )
+        if len(results) > 0:
+            results = [result[0] for result in results]
+        else:
+            results = list()
+        return results
+
     def get_all_closest_matches(self):
         """
         Retrieves all the rows in the closest match table
@@ -760,6 +775,10 @@ class DBCachingManagerBase(abc.ABC):
             return {x: results[x]['most_similar_token'] for x in results
                     if results[x]['most_similar_token'] is not None}
         return None
+
+    def get_closest_matches_within_closest_match_set(self, closest_match_set):
+        results = [self.get_closest_match_origin(closest_match) for closest_match in closest_match_set]
+        return set(chain.from_iterable(results))
 
 
 class ExampleDBCachingManager(DBCachingManagerBase):
