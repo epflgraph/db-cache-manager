@@ -61,6 +61,15 @@ class DB:
             self.cnx.commit()
             return results
 
+    def format_query(self, query, values=None):
+        self.cnx.ping(reconnect=True)
+        with self.cnx.cursor() as cursor:
+            try:
+                return cursor.mogrify(query, values)
+            except pymysql.Error as e:
+                print("Error", e)
+                raise e
+
     def build_conditions_list(self, conditions=None, values=None):
         if conditions is None:
             return []
