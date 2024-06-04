@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "db_cache_manager"
-version = "0.2.0"
+version = "0.2.1"
 authors = [
   { name="Ramtin Yazdanian", email="ramtin.yazdanian@epfl.ch" },
   { name="Aitor Pérez", email="aitor.perez@epfl.ch" }
