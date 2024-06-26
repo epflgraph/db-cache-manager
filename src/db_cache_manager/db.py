@@ -744,7 +744,6 @@ class DBCachingManagerBase(abc.ABC):
             None
         """
         closest_match = values_to_insert['most_similar_token']
-        closest_match = self.get_closest_match(closest_match)
         self._insert_or_update_details(self.most_similar_table, id_token, {'most_similar_token': closest_match})
 
     def get_closest_match(self, id_token):
