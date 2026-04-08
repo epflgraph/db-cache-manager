@@ -29,7 +29,12 @@ class DB:
         self.user = db_config['user']
         self.password = db_config['password']
 
-        self.cnx = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+        # self.cnx = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password)
+        import ssl
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        self.cnx = pymysql.connect(host=self.host, port=self.port, user=self.user, password=self.password, ssl=ctx)
 
     def __del__(self):
         if hasattr(self, 'cnx'):
